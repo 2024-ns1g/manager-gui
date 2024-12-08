@@ -78,6 +78,10 @@ class ContainerManager:
         except Exception as e:
             print(f"エラー: すべてのコンテナの停止に失敗しました - {e}")
 
+    def get_started_container_count(self) -> int:
+        """起動中のコンテナ数を取得"""
+        return sum(card.is_running() for card in self.container_cards.values())
+
     def check_all_running(self) -> bool:
         """すべてのコンテナが起動中かを確認"""
         return all(card.is_running() for card in self.container_cards.values())

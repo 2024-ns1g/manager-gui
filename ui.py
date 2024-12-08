@@ -30,11 +30,14 @@ class BackendManager(Gtk.Window):
     def build_ui(self) -> None:
         """UI全体を構築"""
         main_layout = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        main_layout.set_margin_top(15)
-        main_layout.set_margin_bottom(15)
-        main_layout.set_margin_start(15)
-        main_layout.set_margin_end(15)
+        main_layout.set_margin_top(8)
+        main_layout.set_margin_bottom(8)
+        main_layout.set_margin_start(8)
+        main_layout.set_margin_end(8)
         self.add(main_layout)
+
+        # 最小横幅のみ指定
+        main_layout.set_size_request(512, -1)
 
         # 全体の状態セクション
         overall_status_section = self.build_overall_status_section()
@@ -85,8 +88,17 @@ class BackendManager(Gtk.Window):
     def update_container_status(self) -> None:
         """コンテナの状態を更新"""
         self.container_manager.update_container_status()
-        status_text = "すべて起動中" if self.container_manager.check_all_running() else "一部停止中"
-        self.overall_status_label.set_text(f"全体の状態: {status_text}")
+        # container_manager.get_started_container_count()
+        started_count = self.container_manager.get_started_container_count()
+        total_count = len(self.container_manager.container_cards)
+        if (started_count == total_count) and total_count > 0:
+            status_text = f"全体の状態: 全サービス起動中"
+        elif started_count > 0:
+            status_text = f"全体の状態: {started_count}/{total_count} サービス起動中"
+        elif total_count > 0:
+            status_text = f"全体の状態: 全サービス停止中"
+
+        self.overall_status_label.set_text(f"{status_text}")
 
     def start_periodic_update(self) -> None:
         """状態を定期的に更新するスレッドを開始"""

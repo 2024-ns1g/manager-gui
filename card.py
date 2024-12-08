@@ -1,5 +1,5 @@
+from gi.repository import Gtk, GLib
 import webbrowser
-from gi.repository import Gtk
 from log_viewer import ContainerLogViewer
 
 
@@ -28,11 +28,16 @@ class ContainerCard:
         self.switch = Gtk.Switch()
         self.switch.set_active(container.get("state", "stopped") == "running")
         self.switch.connect("state-set", self.on_switch_toggled)
+        self.switch.set_halign(Gtk.Align.CENTER)
+        self.switch.set_valign(Gtk.Align.CENTER)
+
         self.widget.pack_start(info_box, True, True, 0)
         self.widget.pack_start(self.switch, False, False, 0)
 
         # 右側: メニューボタン
         menu_button = Gtk.MenuButton(label="⋮")
+        menu_button.set_halign(Gtk.Align.END)
+        menu_button.set_valign(Gtk.Align.CENTER)
         menu = Gtk.Menu()
 
         # 詳細情報メニュー
