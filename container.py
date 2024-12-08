@@ -6,14 +6,20 @@ from config import compose_dir, target_containers
 
 
 class ContainerManager:
-    def __init__(self) -> None:
+    def __init__(self, compose_dir: str) -> None:
+        self.compose_dir = compose_dir  # compose_dir を保持
         self.container_cards: Dict[str, ContainerCard] = {}
 
     def initialize_cards(self, layout) -> None:
         """UIにカードを追加"""
         for container in target_containers:
-            card = ContainerCard(container, self.start_container, self.stop_container)
-            layout.pack_start(card.get_widget(), False, False, 10)
+            card = ContainerCard(
+                container,
+                self.compose_dir,  # compose_dir を渡す
+                self.start_container,
+                self.stop_container,
+            )
+            layout.pack_start(card.get_widget(), False, False, 5)
             self.container_cards[container["service"]] = card
 
     def update_container_status(self) -> None:
@@ -29,16 +35,15 @@ class ContainerManager:
                 try:
                     container_data = json.loads(line)  # 各行をJSONパース
                     service_name = container_data.get("Service")
-                    state = container_data.get("State", "stopped")
                     if service_name:  # サービス名が存在する場合のみ保存
-                        containers[service_name] = state
+                        containers[service_name] = container_data  # すべての情報を保存
                 except json.JSONDecodeError as e:
                     print(f"エラー: JSONデコードに失敗しました (行: {line}) - {e}")
 
             # 各コンテナカードに状態を反映
             for service_name, card in self.container_cards.items():
-                state = containers.get(service_name, "stopped")  # サービスがない場合は "stopped" とする
-                card.update_status(state)
+                container_data = containers.get(service_name, {"State": "stopped", "Service": service_name})  # サービスがない場合はデフォルトデータ
+                card.update_container_data(container_data)
 
         except Exception as e:
             print(f"エラー: 状況の更新に失敗しました - {e}")

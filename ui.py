@@ -4,15 +4,18 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
 import threading
 import time
+from config import compose_dir
 
 
 class BackendManager(Gtk.Window):
     def __init__(self) -> None:
         super().__init__(title="Backend コンテナ管理ツール")
         self.set_border_width(10)
-        self.container_manager = ContainerManager()
 
-        # ウィンドウサイズ調整
+        # ContainerManager の初期化
+        self.container_manager = ContainerManager(compose_dir)
+
+        # ウィンドウサイズをコンテンツ量に応じて調整
         self.set_resizable(False)
 
         # UIの構築
@@ -34,19 +37,16 @@ class BackendManager(Gtk.Window):
         self.add(main_layout)
 
         # 全体の状態セクション
-        overall_status_frame = self.build_overall_status_section()
-        main_layout.pack_start(overall_status_frame, False, False, 10)
+        overall_status_section = self.build_overall_status_section()
+        main_layout.pack_start(overall_status_section, False, False, 10)
 
         # コンテナごとの稼働状況セクション
         container_status_frame = self.build_container_status_section()
         main_layout.pack_start(container_status_frame, True, True, 10)
 
-    def build_overall_status_section(self) -> Gtk.Frame:
+    def build_overall_status_section(self) -> Gtk.Box:
         """全体の状態セクションを構築"""
-        frame = Gtk.Frame(label="🖥️ 全体の状態")
-        frame.set_margin_bottom(10)
         layout = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=20)
-        frame.add(layout)
 
         # 全体の状態ラベル
         self.overall_status_label = Gtk.Label(label="全体の状態: 未確認")
@@ -65,12 +65,11 @@ class BackendManager(Gtk.Window):
 
         layout.pack_end(button_layout, False, False, 0)
 
-        return frame
+        return layout
 
     def build_container_status_section(self) -> Gtk.Frame:
         """コンテナごとの稼働状況セクションを構築"""
         frame = Gtk.Frame(label="🛠️ コンテナの稼働状況")
-        frame.set_margin_bottom(10)
         layout = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         layout.set_margin_top(10)
         layout.set_margin_bottom(10)
