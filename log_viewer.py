@@ -1,5 +1,5 @@
 from utils import run_command
-from gi.repository import Gtk
+from gi.repository import Gtk, GLib
 
 
 class ContainerLogViewer(Gtk.Window):
@@ -62,6 +62,10 @@ class ContainerLogViewer(Gtk.Window):
         self.log_buffer.insert_at_cursor(logs)
 
         # 自動スクロールを一番下に
+        GLib.idle_add(self.scroll_to_bottom)
+
+    def scroll_to_bottom(self) -> None:
+        """スクロールを一番下に"""
         end_iter = self.log_buffer.get_end_iter()
         self.log_view.scroll_to_iter(end_iter, 0.0, True, 0.0, 1.0)
 
