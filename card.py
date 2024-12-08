@@ -67,7 +67,6 @@ class ContainerCard:
     def update_container_data(self, container_data: dict) -> None:
         """状態を更新する (RAWデータも更新)"""
         self.container_data = container_data
-        self.raw_output = ""  # RAW出力を初期化
         self.switch.set_active(container_data.get("State", "stopped") == "running")
 
     def on_switch_toggled(self, switch: Gtk.Switch, state: bool) -> None:
@@ -115,17 +114,6 @@ class ContainerCard:
 
         # 階層構造を生成
         create_hierarchical_view(layout, self.container_data)
-
-        # RAWデータセクション (初期状態で非展開)
-        raw_expander = Gtk.Expander(label="RAWデータ")
-        raw_output_text = Gtk.TextView()
-        raw_output_text.set_editable(False)
-        raw_output_text.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)  # 長すぎる場合に改行
-        raw_output_buffer = raw_output_text.get_buffer()
-        raw_output_buffer.set_text(self.raw_output)
-        raw_expander.add(raw_output_text)
-        raw_expander.set_expanded(False)  # 最初は非展開
-        layout.pack_start(raw_expander, False, False, 0)
 
         # スクロールエリアにレイアウトをセット
         scroll.add(layout)
