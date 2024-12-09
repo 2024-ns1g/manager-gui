@@ -27,3 +27,5 @@ target_containers = [
         ],
     },
 ]
+
+enable_log = True
