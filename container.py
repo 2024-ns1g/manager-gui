@@ -1,21 +1,24 @@
 import json
-from typing import Dict
-from utils import run_command
+from typing import Dict, Callable, Optional
+from utils import run_command_async, run_command
 from card import ContainerCard
 from config import compose_dir, target_containers
 
 
 class ContainerManager:
-    def __init__(self, compose_dir: str) -> None:
-        self.compose_dir = compose_dir  # compose_dir を保持
+    def __init__(self, compose_dir: str, status_callback: Optional[Callable[[str], None]] = None) -> None:
+        self.compose_dir = compose_dir
         self.container_cards: Dict[str, ContainerCard] = {}
+        self.status_callback = status_callback
+
+    def set_status_callback(self, callback: Callable[[str], None]):
+        self.status_callback = callback
 
     def initialize_cards(self, layout) -> None:
-        """UIにカードを追加"""
         for container in target_containers:
             card = ContainerCard(
                 container,
-                self.compose_dir,  # compose_dir を渡す
+                self.compose_dir,
                 self.start_container,
                 self.stop_container,
             )
@@ -23,65 +26,75 @@ class ContainerManager:
             self.container_cards[container["service"]] = card
 
     def update_container_status(self) -> None:
-        """Podmanの状態を取得してUIに反映"""
+        """Podmanの状態を取得してUIに反映する。
+           状態取得は同期でも問題ないが、もし重い場合は非同期化可能。
+        """
         try:
-            # Podmanの出力を取得
             result = run_command(["podman", "compose", "ps", "--format=json"], cwd=compose_dir)
-            print(f"Podman出力:\n{result}")  # デバッグ用出力
-
-            # 各行を個別にパースしてサービス情報を取得
+            print(f"Podman出力:\n{result}")
             containers = {}
             for line in result.strip().splitlines():
                 try:
-                    container_data = json.loads(line)  # 各行をJSONパース
+                    container_data = json.loads(line)
                     service_name = container_data.get("Service")
-                    if service_name:  # サービス名が存在する場合のみ保存
-                        containers[service_name] = container_data  # すべての情報を保存
+                    if service_name:
+                        containers[service_name] = container_data
                 except json.JSONDecodeError as e:
                     print(f"エラー: JSONデコードに失敗しました (行: {line}) - {e}")
 
-            # 各コンテナカードに状態を反映
             for service_name, card in self.container_cards.items():
-                container_data = containers.get(service_name, {"State": "stopped", "Service": service_name})  # サービスがない場合はデフォルトデータ
+                container_data = containers.get(service_name, {"State": "stopped", "Service": service_name})
                 card.update_container_data(container_data)
 
         except Exception as e:
             print(f"エラー: 状況の更新に失敗しました - {e}")
 
     def start_container(self, service_name: str) -> None:
-        """指定したサービスを起動"""
-        try:
-            run_command(["podman", "compose", "up", "-d", service_name], cwd=compose_dir)
-        except Exception as e:
-            print(f"エラー: コンテナ {service_name} の起動に失敗しました - {e}")
+        run_command_async(
+            ["podman", "compose", "up", "-d", service_name],
+            cwd=self.compose_dir,
+            start_msg=f"{service_name} 起動中...",
+            done_msg=f"{service_name} が起動しました",
+            fail_msg=f"{service_name} の起動に失敗しました",
+            status_callback=self.status_callback,
+            done_callback=self.update_container_status
+        )
 
     def stop_container(self, service_name: str) -> None:
-        """指定したサービスを停止"""
-        try:
-            run_command(["podman", "compose", "stop", service_name], cwd=compose_dir)
-        except Exception as e:
-            print(f"エラー: コンテナ {service_name} の停止に失敗しました - {e}")
+        run_command_async(
+            ["podman", "compose", "stop", service_name],
+            cwd=self.compose_dir,
+            start_msg=f"{service_name} 停止中...",
+            done_msg=f"{service_name} が停止しました",
+            fail_msg=f"{service_name} の停止に失敗しました",
+            status_callback=self.status_callback,
+            done_callback=self.update_container_status
+        )
 
     def start_all_containers(self) -> None:
-        """すべてのサービスを起動"""
-        try:
-            run_command(["podman", "compose", "up", "-d"], cwd=compose_dir)
-            self.update_container_status()
-        except Exception as e:
-            print(f"エラー: すべてのコンテナの起動に失敗しました - {e}")
+        run_command_async(
+            ["podman", "compose", "up", "-d"],
+            cwd=self.compose_dir,
+            start_msg="すべてのサービスを起動中...",
+            done_msg="すべてのサービスが起動しました",
+            fail_msg="すべてのコンテナの起動に失敗しました",
+            status_callback=self.status_callback,
+            done_callback=self.update_container_status
+        )
 
     def stop_all_containers(self) -> None:
-        """すべてのサービスを停止"""
-        try:
-            run_command(["podman", "compose", "down"], cwd=compose_dir)
-            self.update_container_status()
-        except Exception as e:
-            print(f"エラー: すべてのコンテナの停止に失敗しました - {e}")
+        run_command_async(
+            ["podman", "compose", "down"],
+            cwd=self.compose_dir,
+            start_msg="すべてのサービスを停止中...",
+            done_msg="すべてのサービスが停止しました",
+            fail_msg="すべてのコンテナの停止に失敗しました",
+            status_callback=self.status_callback,
+            done_callback=self.update_container_status
+        )
 
     def get_started_container_count(self) -> int:
-        """起動中のコンテナ数を取得"""
         return sum(card.is_running() for card in self.container_cards.values())
 
     def check_all_running(self) -> bool:
-        """すべてのコンテナが起動中かを確認"""
         return all(card.is_running() for card in self.container_cards.values())
