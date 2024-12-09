@@ -9,7 +9,6 @@ target_containers = [
         "description": "オブジェクトストレージサービス",
         "links": [
             {"name": "WebUI", "url": "http://127.0.0.1:9000"},
-            {"name": "API Docs", "url": "http://127.0.0.1:9001"},
         ],
     },
     {
@@ -23,7 +22,7 @@ target_containers = [
         "service": "backend-api",
         "description": "アプリケーションバックエンド",
         "links": [
-            {"name": "API Endpoint", "url": "http://127.0.0.1:8080"},
+            {"name": "APIドキュメント", "url": "http://localhost:8080/docs"},
         ],
     },
 ]
